@@ -77,10 +77,10 @@
 
     let normals =
       [
-        0, 0, 1.,
-        0, 0, 1.,
-        0, 0, 1.,
-        0, 0, 1.,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
       ]
 
     let uvs = [
@@ -222,16 +222,15 @@
       let cosA = Math.cos(scoopAngle);
       let sinA = Math.sin(scoopAngle);
 
-      // ---- PLANE ----
-      let shapeMatrix = [
+      // ---- "PLANE" ----
+      let planeMatrix = [
         cosA * scaleX, sinA, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
         x, y, 5, 1
       ];
-      modelViewMatrix.set(shapeMatrix);
-
-      gl.uniformMatrix4fv(gl.getUniformLocation(shader, "uModelViewMatrix"), false, modelViewMatrix);
+      
+      gl.uniformMatrix4fv(gl.getUniformLocation(shader, "uModelViewMatrix"), false, planeMatrix);
       gl.uniform1f(gl.getUniformLocation(shader, "uTime"), temp);
 
       gl.clearColor(0, 0, 0, 1.0);
@@ -259,15 +258,14 @@
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
       // ---- BULLETS ----
-      // let rise = (temp % 2) * 5;
       bulletCooldown = -1
       let bulletIntervalFrames = Math.floor(5 + 5 * Math.abs(Math.sin(temp)));
 
-      let worldTip = transformVec4(shapeMatrix, [0, 0, 0, 1]);
+      let worldTip = transformVec4(planeMatrix, [0, 0, 0, 1]);
 
       if (bulletCooldown <= 0) {
         bulletCooldown = bulletIntervalFrames;
-        let worldTip = transformVec4(shapeMatrix, [0, 0, 0, 1]);
+        let worldTip = transformVec4(planeMatrix, [0, 0, 0, 1]);
         bullets.push(new Bullet(worldTip.x, worldTip.y, worldTip.z))
       }
       let rise = 0;

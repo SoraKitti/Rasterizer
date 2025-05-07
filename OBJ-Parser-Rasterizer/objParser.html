@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title> Rasterizer OBJ Parser</title>
+    <style>
+        * {
+            margin: 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canv"></canvas>
+    <!-- <script src="./obj.js"></script> -->
+    <script src="./NewTexturedSword.js"></script>
+    <!-- <script src="./Sword.js"></script> -->
+    <script src="./RasterizerVertexShader.js"></script>
+    <script src="./fragmentShaderClass.js"></script>
+
+    <script>
+        let v = [];
+        let f = [];
+        let vn = [];
+        let vt = [];
+        let s = [];
+        let positionIndices = [];
+        let vCount = 0;
+        let fCount = 0;
+        let vnCount = 0;
+        let vtCount = 0;
+        let sCount = 0;
+        let MVMScale = 10.0; // var to change the scaling for modelViewMatrix
+        let MVM_XOffset = -2;
+        // let MVM_YOffset = 22;
+        let MVM_YOffset = -6.5;
+
+        let str = obj.split("\n");
+
+        for (let i = 0; i < str.length; i++) {
+
+            let lineSplit = str[i].split(/\s+/)
+            console.log(lineSplit)
+
+            switch (lineSplit[0]) {
+                case "f":
+                    for (let j = 1; j < lineSplit.length; j++) {
+                        let temp = lineSplit[j].split("/");
+                        f.push(Number(temp[0]) - 1); // OBJ is 1-indexed, WebGL needs 0-indexed
+                    }
+                    fCount += (lineSplit.length - 1);
+                    break;
+
+                case "v":
+                    v.push(Number(lineSplit[1]));
+                    v.push(Number(lineSplit[2]));
+                    v.push(Number(lineSplit[3]));
+                    vCount += 3;
+                    break;
+
+                case "vn":
+                    vn.push(Number(lineSplit[1]));
+                    vn.push(Number(lineSplit[2]));
+                    vn.push(Number(lineSplit[3]));
+                    vnCount += 3;
+                    break;
+
+                case "vt":
+                    vt.push(Number(lineSplit[1]));
+                    vt.push(Number(lineSplit[2]));
+                    vtCount += 2;
+                    break;
+
+                case "s":
+                    s.push(Number(lineSplit[1]));
+                    sCount++;
+                    break;
+            }
+        }
+
+        let canvas = document.querySelector("#canv")
+        canvas.width = 640
+        canvas.height = 640
+        let gl = canvas.getContext("webgl");
+
+        let projectionMatrix = new Float32Array(16);
+        projectionMatrix[0] = 1.0           // X axis scaling
+        projectionMatrix[5] = 1.0           // Y axis scaling
+        projectionMatrix[10] = 1.0
+        projectionMatrix[11] = 1.0
+        projectionMatrix[14] = -2.0
+        projectionMatrix[15] = 0.0
+
+        let modelViewMatrix = new Float32Array(16);
+        modelViewMatrix[0] = MVMScale // X scale
+        modelViewMatrix[5] = MVMScale // Y scale
+        modelViewMatrix[10] = MVMScale // Z scale
+        modelViewMatrix[12] = MVM_XOffset // X translate
+        modelViewMatrix[13] = MVM_YOffset // Y translate
+        modelViewMatrix[14] = 10  // Z translate pushes object away from camera on Z axis 
+        modelViewMatrix[15] = 1.0
+
+        let positions = v // assign the vertices we grabbed to be the positions
+        let normals = vn // assign normals we grabbed to be normals
+        let uvs = vt // vt stands for vertex texture coordinate
+        positionIndices = f
+
+        // console.log("Position Array: ")
+        // console.log(positions)
+        // console.log("Normals Array: ")
+        // console.log(normals)
+        // console.log("UVs Array: ")
+        // console.log(uvs)
+        // console.log("Faces Array: ")
+        // console.log(f)
+
+        let shader = gl.createProgram();
+        gl.attachShader(shader, loadShader(gl, gl.VERTEX_SHADER, vertexShader));
+        gl.attachShader(shader, loadShader(gl, gl.FRAGMENT_SHADER, fragmentShader));
+        gl.linkProgram(shader);
+        if (!gl.getProgramParameter(shader, gl.LINK_STATUS)) { throw new Error(gl.getError()); }
+        gl.useProgram(shader);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        let positions32 = new Float32Array(positions)
+        // console.log(positions32)
+        gl.bufferData(gl.ARRAY_BUFFER, positions32, gl.STATIC_DRAW);
+
+        let vertexPosition = gl.getAttribLocation(shader, "aPosition");
+        gl.vertexAttribPointer(vertexPosition, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(vertexPosition);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        let normals32 = new Float32Array(normals)
+        console.log(normals32)
+        gl.bufferData(gl.ARRAY_BUFFER, normals32, gl.STATIC_DRAW);
+
+        let vertexNormal = gl.getAttribLocation(shader, "aNormal")
+        gl.vertexAttribPointer(vertexNormal, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(vertexNormal);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        let vn32 = new Float32Array(uvs)
+        console.log(vn32)
+        gl.bufferData(gl.ARRAY_BUFFER, vn32, gl.STATIC_DRAW);
+
+        // let vertexUV = (gl.ARRAY_BUFFER, gl.createBuffer());
+        let vertexUV = gl.getAttribLocation(shader, "aUV");
+        gl.vertexAttribPointer(vertexUV, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(vertexUV);
+
+
+        gl.uniformMatrix4fv(gl.getUniformLocation(shader, "uProjectionMatrix"), false, projectionMatrix);
+
+
+        // grab only the vertex values from the faces and put them into the positionIndices array
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+        let positionIndex16 = new Uint16Array(positionIndices)
+        console.log(positionIndex16)
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, positionIndex16, gl.STATIC_DRAW)
+        console.log(gl.ELEMENT_ARRAY_BUFFER)
+
+        function loadShader(gl, type, source) {
+            let shader = gl.createShader(type);   //Allocate memory for the type of shader
+            gl.shaderSource(shader, source);      //Assign the code as a string
+            gl.compileShader(shader);             //Tell the GPU to compile the shader
+            let compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS)
+            let compilationLog = gl.getShaderInfoLog(shader)
+            console.log(compiled, compilationLog)
+            return shader;
+        }
+
+        let temp = 0
+        function render() {
+            temp += .01
+            gl.uniformMatrix4fv(gl.getUniformLocation(shader, "uModelViewMatrix"), false, modelViewMatrix);    //Create a uniform on the GPU called modelViewMatrix
+
+            gl.clearColor(0, 0, 0, 1.)
+            gl.clearDepth(1.0)
+            gl.enable(gl.DEPTH_TEST)
+            gl.depthFunc(gl.LEQUAL)
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+            gl.drawElements(gl.TRIANGLES, positionIndices.length, gl.UNSIGNED_SHORT, 0)                            //Draw X vertices as distinct triangles
+            gl.uniform1f(gl.getUniformLocation(shader, "uTime"), temp);
+        }
+
+        setInterval(render, 10)
+    </script>
+</body>
+
+</html>
