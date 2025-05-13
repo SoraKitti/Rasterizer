@@ -109,37 +109,36 @@
       }
     }
 
-    let shader = gl.createProgram();                                               //Create a program that we are going to use on the GPU
+    let shader = gl.createProgram();                                               //Create a program for GPU
     gl.attachShader(shader, loadShader(gl, gl.VERTEX_SHADER, vertexShader));       //Assign the vertex shader code to a memory slot on the GPU
-    gl.attachShader(shader, loadShader(gl, gl.FRAGMENT_SHADER, fragmentShader));   //Assign the vertex shader code to a memory slot on the GPU
-    gl.linkProgram(shader);                                                        //Do the compiling and linking on the GPU
-    if (!gl.getProgramParameter(shader, gl.LINK_STATUS)) { throw new Error(gl.getError()); }    //Do some error checking
-    gl.useProgram(shader);                                                         //Tell the GPU that this is the program to use
+    gl.attachShader(shader, loadShader(gl, gl.FRAGMENT_SHADER, fragmentShader));   //Assign the fragment shader code to a memory slot on the GPU
+    gl.linkProgram(shader);                                                        //compiling + linking on the GPU
+    if (!gl.getProgramParameter(shader, gl.LINK_STATUS)) { throw new Error(gl.getError()); }
+    gl.useProgram(shader);                                                         //Tell the GPU which program to use
 
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());                              //Create a new buffer on the GPU and make it an array buffer
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);     //Put the positions into this new buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());                              //Create a new array buffer on the GPU 
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);     //Put the positions into buffer
 
     // per-frame information
 
-    let vertexPosition = gl.getAttribLocation(shader, "aPosition")                                     //Create a new variable called position that is the location attribute
-    gl.vertexAttribPointer(vertexPosition, 3, gl.FLOAT, false, 0, 0);                                 //Create a vertex attribute that says they will be vec3s
+    let vertexPosition = gl.getAttribLocation(shader, "aPosition")          //Create a new variable called position that is the location attribute
+    gl.vertexAttribPointer(vertexPosition, 3, gl.FLOAT, false, 0, 0);       //Create a vertex attribute that says they will be vec3s
     gl.enableVertexAttribArray(vertexPosition);                             //Enable the vertex attribute
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());                              //Create a new buffer on the GPU and make it an array buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());                              // Create a new array buffer on the GPU 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);     //Put the positions into this new buffer
 
-    let vertexNormal = gl.getAttribLocation(shader, "aNormal")                                     //Create a new variable called position that is the location attribute
-    gl.vertexAttribPointer(vertexNormal, 3, gl.FLOAT, false, 0, 0);                                 //Create a vertex attribute that says they will be vec3s
-    gl.enableVertexAttribArray(vertexNormal);                             //Enable the vertex attribute
+    let vertexNormal = gl.getAttribLocation(shader, "aNormal")
+    gl.vertexAttribPointer(vertexNormal, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vertexNormal);
 
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());                              //Create a new buffer on the GPU and make it an array buffer
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);     //Put the positions into this new buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
 
-    let vertexUV = gl.getAttribLocation(shader, "aUV")                                     //Create a new variable called position that is the location attribute
-    gl.vertexAttribPointer(vertexUV, 2, gl.FLOAT, false, 0, 0);                                 //Create a vertex attribute that says they will be vec3s
-    gl.enableVertexAttribArray(vertexUV);                             //Enable the vertex attribute
+    let vertexUV = gl.getAttribLocation(shader, "aUV")
+    gl.vertexAttribPointer(vertexUV, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vertexUV);
 
     gl.uniformMatrix4fv(gl.getUniformLocation(shader, "uProjectionMatrix"), false, projectionMatrix);  //Create a uniform on the GPU called projectionMatrix
 
@@ -229,7 +228,7 @@
         0, 0, 1, 0,
         x, y, 5, 1
       ];
-      
+
       gl.uniformMatrix4fv(gl.getUniformLocation(shader, "uModelViewMatrix"), false, planeMatrix);
       gl.uniform1f(gl.getUniformLocation(shader, "uTime"), temp);
 
@@ -257,11 +256,13 @@
 
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
-      // ---- BULLETS ----
-      bulletCooldown = -1
-      let bulletIntervalFrames = Math.floor(5 + 5 * Math.abs(Math.sin(temp)));
-
+      // ---- BULLETS ----      
       let worldTip = transformVec4(planeMatrix, [0, 0, 0, 1]);
+
+      if (bulletCooldown > 0) {
+        bulletCooldown -= 1;
+      }
+      let bulletIntervalFrames = 60;
 
       if (bulletCooldown <= 0) {
         bulletCooldown = bulletIntervalFrames;
